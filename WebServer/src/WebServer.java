@@ -1,31 +1,25 @@
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.Maze;
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantGenerateOutputFileException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantReadMazeInputFileException;
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunningStrategyException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.render.RenderMaze;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.render.RenderMazeHTMLClientCanvas;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.strategies.FactoryMazeRunningStrategies;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.strategies.MazeRunningStrategy;
 
 public class WebServer {
+    private static MetricSystem metricSystem;
+
 
     public static void main(String[] args) throws Exception {
+        metricSystem = MetricSystem.getInstance();
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
         server.createContext("/test", new TestHandler());
         server.createContext("/mzrun.html", new MazeRunnerHandler());
@@ -55,6 +49,8 @@ public class WebServer {
             try {
                 System.out.println("Doing maze request in thread " + java.lang.Thread.currentThread().getId());
                 Map<String, String> query = parseQueryString(t.getRequestURI().getQuery());
+
+                metricSystem.startRequest(new Metric(query.get("x0"), query.get("x1"), query.get("y0"), query.get("y1"), query.get("v"), query.get("s")));
 
                 if (query.size() < 7) {
                     throw new IllegalArgumentException("InsuficientArguments - The maze runners do not have enough information to solve the maze");
@@ -123,12 +119,13 @@ public class WebServer {
                 OutputStream os = t.getResponseBody();
                 os.write(mazeRendered.getBytes());
                 os.close();
-                Test.printICount1(java.lang.Thread.currentThread().getId());
+                metricSystem.finishRequest();
             } catch (Exception e) {
                 t.sendResponseHeaders(400, e.getMessage().length());
                 OutputStream os = t.getResponseBody();
                 os.write(e.getMessage().getBytes());
                 os.close();
+                metricSystem.abortRequest();
             }
         }
     }
