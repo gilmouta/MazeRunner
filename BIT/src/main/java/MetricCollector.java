@@ -17,7 +17,16 @@ public class MetricCollector {
         String outPath;
         if (argv.length == 0) {
             System.out.println("Instrumenting strategy files");
-            inPath = "out/production/MazeRunner/pt/ulisboa/tecnico/meic/cnv/mazerunner/maze/strategies/";
+            inPath = "MazeRunner/target/classes/pt/ulisboa/tecnico/meic/cnv/mazerunner/maze/strategies";
+            try {
+                // Dirty fix to ease IntelliJ use
+                String here = new File(".").getCanonicalPath();
+                if (here.endsWith("BIT")) {
+                    inPath = "../" + inPath;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             outPath = inPath;
             infilenames = new String[]{"AStarStrategy.class", "BreadthFirstSearchStrategy.class", "DepthFirstSearchStrategy.class"};
         } else {
