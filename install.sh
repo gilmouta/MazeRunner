@@ -25,7 +25,7 @@ mvn install
 echo "# Done"
 
 echo "# Running Webserver"
-cd Webserver
+cd WebServer
 mvn exec:java
 cd ..
 echo "# Done"

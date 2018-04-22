@@ -93,7 +93,8 @@ public class WebServer {
 
                 // Read the maze from the file
                 try {
-                    FileInputStream fileIn = new FileInputStream(mazeFile);
+                    //FileInputStream fileIn = new FileInputStream(mazeFile);
+                    InputStream fileIn = WebServer.class.getResourceAsStream(mazeFile);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     maze = (Maze) in.readObject();
                     in.close();
