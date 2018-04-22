@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/BIT/BIT.iml" filepath="$PROJECT_DIR$/BIT/BIT.iml" />
+      <module fileurl="file://$PROJECT_DIR$/LoadBalancer/LoadBalancer.iml" filepath="$PROJECT_DIR$/LoadBalancer/LoadBalancer.iml" />
       <module fileurl="file://$PROJECT_DIR$/MazeRunner/MazeRunner.iml" filepath="$PROJECT_DIR$/MazeRunner/MazeRunner.iml" />
       <module fileurl="file://$PROJECT_DIR$/MetricSystem/MetricSystem.iml" filepath="$PROJECT_DIR$/MetricSystem/MetricSystem.iml" />
       <module fileurl="file://$PROJECT_DIR$/WebServer/WebServer.iml" filepath="$PROJECT_DIR$/WebServer/WebServer.iml" />

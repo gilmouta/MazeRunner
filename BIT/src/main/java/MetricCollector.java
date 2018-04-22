@@ -7,6 +7,7 @@ import java.util.*;
 public class MetricCollector {
     //private static PrintStream out = null;
     private static ThreadLocal<Metric> threadMetric = new ThreadLocal<>();
+    private static ThreadLocal<Integer> callDepth = new ThreadLocal<>();
     
     /* main reads in all the files class files present in the input directory,
      * instruments them, and outputs them to the specified output directory.
@@ -46,7 +47,9 @@ public class MetricCollector {
                 // see java.util.Enumeration for more information on Enumeration class
                 for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
                     Routine routine = (Routine) e.nextElement();
-                    
+                    routine.addBefore("MetricCollector", "mstart", new Integer(1));
+                    routine.addAfter("MetricCollector", "mend", new Integer(1));
+
                     for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                         BasicBlock bb = (BasicBlock) b.nextElement();
                         bb.addBefore("MetricCollector", "iCount", new Integer(bb.size()));
@@ -69,10 +72,23 @@ public class MetricCollector {
 
     public static synchronized void deleteMetric() {
         threadMetric.remove();
+        callDepth.remove();
     }
 
     public static synchronized void iCount(int incr) {
         threadMetric.get().incrementICount(incr);
+    }
+
+    public static synchronized void mstart(int m) {
+        if (callDepth.get() == null) {
+            callDepth.set(0);
+        }
+        callDepth.set(callDepth.get()+1);
+        threadMetric.get().updateCallDepth(callDepth.get());
+    }
+
+    public static synchronized void mend(int m) {
+        callDepth.set(callDepth.get()-1);
     }
 }
 

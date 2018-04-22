@@ -16,6 +16,7 @@ public class Metric {
 
     // Collected metrics
     private int iCount;
+    private int callDepth;
 
     public Metric(String xStart, String xFinal, String yStart, String yFinal, String velocity, String strategy){
         this.xStart = xStart;
@@ -34,7 +35,7 @@ public class Metric {
     }
 
     public String toString() {
-        return "[Metric] icount: " + iCount;
+        return "[Metric] icount: " + iCount + " | calldepth: " + callDepth;
     }
 
     @DynamoDBHashKey(attributeName="Id")
@@ -95,5 +96,20 @@ public class Metric {
     }
     public void setiCount(int iCount) {
         this.iCount = iCount;
+    }
+
+    @DynamoDBAttribute(attributeName="callDepth")
+    public int getCallDepth() {
+        return callDepth;
+    }
+
+    public void setCallDepth(int callDepth) {
+        this.callDepth = callDepth;
+    }
+
+    public void updateCallDepth(int callDepth) {
+        if (callDepth > this.callDepth) {
+            this.callDepth = callDepth;
+        }
     }
 }
