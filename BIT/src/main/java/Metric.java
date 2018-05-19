@@ -1,8 +1,6 @@
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
+import java.util.HashMap;
+import java.util.Map;
 
-@DynamoDBTable(tableName="Metrics")
 public class Metric {
     // Request parameters
     private Integer id;
@@ -15,8 +13,9 @@ public class Metric {
     //Maze maze;
 
     // Collected metrics
-    private int iCount;
     private int callDepth;
+    private Map<Integer, Integer> loopCount;  // Don't store in DB
+    private int loopDepth;
 
     public Metric(String xStart, String xFinal, String yStart, String yFinal, String velocity, String strategy){
         this.xStart = xStart;
@@ -26,23 +25,17 @@ public class Metric {
         this.velocity = velocity;
         this.strategy = strategy;
         //this.maze = maze;
-
-        this.iCount = 0;
+        this.callDepth = 0;
+        this.loopCount = new HashMap<>();
+        this.loopDepth = 0;
     }
-
-    public void incrementICount(int incr) {
-        this.iCount += incr;
-    }
-
     public String toString() {
-        return "[Metric] icount: " + iCount + " | calldepth: " + callDepth;
+        return "[Metric] loopdepth: " + loopDepth + " | calldepth: " + callDepth;
     }
 
-    @DynamoDBHashKey(attributeName="Id")
     public Integer getId() { return id; }
     public void setId(Integer id) {this.id = id; }
 
-    @DynamoDBAttribute(attributeName="xStart")
     public String getxStart() {
         return xStart;
     }
@@ -50,7 +43,6 @@ public class Metric {
         this.xStart = xStart;
     }
 
-    @DynamoDBAttribute(attributeName="xFinal")
     public String getxFinal() {
         return xFinal;
     }
@@ -58,7 +50,6 @@ public class Metric {
         this.xFinal = xFinal;
     }
 
-    @DynamoDBAttribute(attributeName="yStart")
     public String getyStart() {
         return yStart;
     }
@@ -66,7 +57,6 @@ public class Metric {
         this.yStart = yStart;
     }
 
-    @DynamoDBAttribute(attributeName="yFinal")
     public String getyFinal() {
         return yFinal;
     }
@@ -74,7 +64,6 @@ public class Metric {
         this.yFinal = yFinal;
     }
 
-    @DynamoDBAttribute(attributeName="velocity")
     public String getVelocity() {
         return velocity;
     }
@@ -82,7 +71,6 @@ public class Metric {
         this.velocity = velocity;
     }
 
-    @DynamoDBAttribute(attributeName="strategy")
     public String getStrategy() {
         return strategy;
     }
@@ -90,19 +78,23 @@ public class Metric {
         this.strategy = strategy;
     }
 
-    @DynamoDBAttribute(attributeName="iCount")
-    public int getiCount() {
-        return iCount;
+    public int getLoopDepth() {
+        return loopDepth;
     }
-    public void setiCount(int iCount) {
-        this.iCount = iCount;
+    public void setLoopDepth(int loopDepth) {
+        this.loopDepth = loopDepth;
     }
 
-    @DynamoDBAttribute(attributeName="callDepth")
+    public Map<Integer, Integer> getLoopCount() {
+        return loopCount;
+    }
+    public void setLoopCount(Map<Integer, Integer> loopCount) {
+        this.loopCount = loopCount;
+    }
+
     public int getCallDepth() {
         return callDepth;
     }
-
     public void setCallDepth(int callDepth) {
         this.callDepth = callDepth;
     }
@@ -110,6 +102,14 @@ public class Metric {
     public void updateCallDepth(int callDepth) {
         if (callDepth > this.callDepth) {
             this.callDepth = callDepth;
+        }
+    }
+
+    public void calculateLoopDepth() {
+        for (Integer depth: loopCount.values()){
+            if (depth > loopDepth){
+                loopDepth = depth;
+            }
         }
     }
 }

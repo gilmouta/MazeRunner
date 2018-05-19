@@ -8,6 +8,7 @@ public class MetricCollector {
     //private static PrintStream out = null;
     private static ThreadLocal<Metric> threadMetric = new ThreadLocal<>();
     private static ThreadLocal<Integer> callDepth = new ThreadLocal<>();
+    private static ThreadLocal<HashMap<Integer,Integer>> loopCount = new ThreadLocal<>();
     
     /* main reads in all the files class files present in the input directory,
      * instruments them, and outputs them to the specified output directory.
@@ -42,20 +43,24 @@ public class MetricCollector {
             if (infilename.endsWith(".class")) {
 				// create class info object
 				ClassInfo ci = new ClassInfo(inPath + System.getProperty("file.separator") + infilename);
-				
                 // loop through all the routines
-                // see java.util.Enumeration for more information on Enumeration class
                 for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
                     Routine routine = (Routine) e.nextElement();
+                    Instruction[] instructions = routine.getInstructions();
+
+                    // Count method call depth
                     routine.addBefore("MetricCollector", "mstart", new Integer(1));
                     routine.addAfter("MetricCollector", "mend", new Integer(1));
 
                     for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                         BasicBlock bb = (BasicBlock) b.nextElement();
-                        bb.addBefore("MetricCollector", "iCount", new Integer(bb.size()));
+                        Instruction instr = (Instruction)instructions[bb.getEndAddress()];
+                        short instr_type = InstructionTable.InstructionTypeTable[instr.getOpcode()];
+                        if (instr_type == InstructionTable.CONDITIONAL_INSTRUCTION) {
+                            instr.addBefore("MetricCollector", "loopcount", new Integer(instr.getOffset()));
+                        }
                     }
                 }
-                //ci.addAfter("MetricCollector", "printICount1", ci.getClassName());
                 ci.write(outPath + System.getProperty("file.separator") + infilename);
             }
         }
@@ -67,16 +72,14 @@ public class MetricCollector {
     }
     
     public static synchronized Metric getMetric() {
+        threadMetric.get().calculateLoopDepth();
         return threadMetric.get();
     }
 
     public static synchronized void deleteMetric() {
         threadMetric.remove();
         callDepth.remove();
-    }
-
-    public static synchronized void iCount(int incr) {
-        threadMetric.get().incrementICount(incr);
+        loopCount.remove();
     }
 
     public static synchronized void mstart(int m) {
@@ -84,11 +87,24 @@ public class MetricCollector {
             callDepth.set(0);
         }
         callDepth.set(callDepth.get()+1);
+        // Keep metric updated with max call depth
         threadMetric.get().updateCallDepth(callDepth.get());
     }
 
     public static synchronized void mend(int m) {
         callDepth.set(callDepth.get()-1);
+    }
+
+    public static synchronized void loopcount(int offset) {
+        if (loopCount.get() == null) {
+            loopCount.set(new HashMap<Integer, Integer>());
+        }
+        if (!loopCount.get().containsKey(offset)) {
+            loopCount.get().put(offset, 1);
+        } else {
+            loopCount.get().put(offset, loopCount.get().get(offset) + 1);
+        }
+        threadMetric.get().setLoopCount(loopCount.get());
     }
 }
 
