@@ -4,13 +4,9 @@ import java.util.Map;
 public class Metric {
     // Request parameters
     private Integer id;
-    private String xStart;
-    private String xFinal;
-    private String yStart;
-    private String yFinal;
-    private String velocity;
+    private int distance;
+    private int velocity;
     private String strategy;
-    //Maze maze;
 
     // Collected metrics
     private int callDepth;
@@ -18,11 +14,12 @@ public class Metric {
     private int loopDepth;
 
     public Metric(String xStart, String xFinal, String yStart, String yFinal, String velocity, String strategy){
-        this.xStart = xStart;
-        this.xFinal = xFinal;
-        this.yStart = yStart;
-        this.yFinal = yFinal;
-        this.velocity = velocity;
+        int x1 = Integer.parseInt(xStart);
+        int x2 = Integer.parseInt(xFinal);
+        int y1 = Integer.parseInt(yStart);
+        int y2 = Integer.parseInt(yFinal);
+        distance = (int) Math.round(Math.sqrt((x2-x1)^2 + (y2-y1)^2));
+        this.velocity = Integer.parseInt(velocity);
         this.strategy = strategy;
         //this.maze = maze;
         this.callDepth = 0;
@@ -36,38 +33,14 @@ public class Metric {
     public Integer getId() { return id; }
     public void setId(Integer id) {this.id = id; }
 
-    public String getxStart() {
-        return xStart;
-    }
-    public void setxStart(String xStart) {
-        this.xStart = xStart;
+    public int getDistance(){
+        return distance;
     }
 
-    public String getxFinal() {
-        return xFinal;
-    }
-    public void setxFinal(String xFinal) {
-        this.xFinal = xFinal;
-    }
-
-    public String getyStart() {
-        return yStart;
-    }
-    public void setyStart(String yStart) {
-        this.yStart = yStart;
-    }
-
-    public String getyFinal() {
-        return yFinal;
-    }
-    public void setyFinal(String yFinal) {
-        this.yFinal = yFinal;
-    }
-
-    public String getVelocity() {
+    public int getVelocity() {
         return velocity;
     }
-    public void setVelocity(String velocity) {
+    public void setVelocity(int velocity) {
         this.velocity = velocity;
     }
 
