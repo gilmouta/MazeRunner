@@ -1,8 +1,19 @@
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.*;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class MetricSystem {
     private static MetricSystem ourInstance = new MetricSystem();
-    private static AmazonDynamoDB dynamoDB;
+    private AmazonDynamoDB dynamoDB;
+    private String tableName;
 
     public static MetricSystem getInstance() {
         return ourInstance;
@@ -47,7 +58,7 @@ public class MetricSystem {
         }
     }
 
-    private static void init() {
+    private void init() {
         /*
          * The ProfileCredentialsProvider will return your [default]
          * credential profile by reading from the credentials file located at
@@ -69,8 +80,7 @@ public class MetricSystem {
                 .build();
 
         try{
-
-            String tableName = "metrics-CNV";
+            tableName = "metrics-CNV";
 
             // Create a table with a primary hash key named 'id', which holds a random String
             CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
@@ -82,7 +92,8 @@ public class MetricSystem {
             TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
             // wait for the table to move into ACTIVE state
             TableUtils.waitUntilActive(dynamoDB, tableName);
-
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         } catch (AmazonServiceException ase) {
             printAmazonServiceException(ase);
         } catch (AmazonClientException ace) {
