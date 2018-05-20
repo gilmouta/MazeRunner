@@ -3,7 +3,6 @@ import java.util.Map;
 
 public class Metric {
     // Request parameters
-    private Integer id;
     private int distance;
     private int velocity;
     private String strategy;
@@ -29,9 +28,6 @@ public class Metric {
     public String toString() {
         return "[Metric] loopdepth: " + loopDepth + " | calldepth: " + callDepth;
     }
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) {this.id = id; }
 
     public int getDistance(){
         return distance;
