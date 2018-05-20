@@ -10,32 +10,9 @@
     <properties>
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
-        <aws.sdk.path>C:/Users/Gil/Documents/CNV/aws-java-sdk-1.11.332</aws.sdk.path>
     </properties>
     <build>
         <plugins>
-            <plugin>
-                <groupId>com.googlecode.addjars-maven-plugin</groupId>
-                <artifactId>addjars-maven-plugin</artifactId>
-                <version>1.0.5</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>add-jars</goal>
-                        </goals>
-                        <configuration>
-                            <resources>
-                                <resource>
-                                    <directory>${aws.sdk.path}/third-party/lib</directory>
-                                </resource>
-                                <resource>
-                                    <directory>${aws.sdk.path}/lib</directory>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>

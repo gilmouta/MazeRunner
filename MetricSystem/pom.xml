@@ -10,7 +10,6 @@
     <properties>
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
-        <aws.sdk.path>/opt/aws-java-sdk</aws.sdk.path>
     </properties>
     <dependencies>
         <dependency>
@@ -20,35 +19,10 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>Amazon</groupId>
-            <artifactId>AmazonSDK</artifactId>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk</artifactId>
+            <version>1.11.333</version>
         </dependency>
     </dependencies>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>com.googlecode.addjars-maven-plugin</groupId>
-                <artifactId>addjars-maven-plugin</artifactId>
-                <version>1.0.5</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>add-jars</goal>
-                        </goals>
-                        <configuration>
-                            <resources>
-                                <resource>
-                                    <directory>${aws.sdk.path}/third-party/lib</directory>
-                                </resource>
-                                <resource>
-                                    <directory>${aws.sdk.path}/lib</directory>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>
