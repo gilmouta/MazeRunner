@@ -1,142 +1,88 @@
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.util.HashMap;
 import java.util.Map;
 
-import static java.net.HttpURLConnection.HTTP_OK;
-
 public class LoadBalancer {
-    static AmazonEC2 ec2;
-
-    private static void init() throws Exception {
-        /*
-         * The ProfileCredentialsProvider will return your [default]
-         * credential profile by reading from the credentials file located at
-         * (~/.aws/credentials).
-         */
-        AWSCredentials credentials = null;
-        try {
-            credentials = new ProfileCredentialsProvider().getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. " +
-                            "Please make sure that your credentials file is at the correct " +
-                            "location (~/.aws/credentials), and is in valid format.",
-                    e);
-        }
-        ec2 = AmazonEC2ClientBuilder.standard().withRegion("eu-west-1").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
-    }
+    private static InstanceManager instanceManager;
 
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8001), 0);
-        server.createContext("/test", new RunnerHandler());
+        instanceManager = InstanceManager.getInstanceManager();
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(80), 0);
+        server.createContext("/mzrun.html", new MazeRunnerHandler());
         server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
-        // FIXME _autoScaler = new AutoScaler();
-        _autoScaler.init();
         System.out.println("Starting Load Balancer.");
         server.start();
     }
 
-    private static boolean isAlive(String ip) {
-        final int RETRY_INTERVAL = 1000;
-        final int TIMEOUT = 2000;
-        HttpURLConnection connection = null;
+    public static Job createJob(String qs){
+        Map<String, String> query = parseQueryString(qs);
 
-        for(int retries=3; retries > 0; retries--) {
-            try {
-                connection = (HttpURLConnection) new URL("http", ip, 8000, "/test").openConnection();
-                connection.setConnectTimeout(TIMEOUT);
-
-                if(connection.getResponseCode() == HTTP_OK) {
-                    connection.disconnect();
-                    return false;
-                }
-
-                Thread.sleep(RETRY_INTERVAL);
-
-            } catch (IOException e) {
-                if(connection != null)
-                    connection.disconnect();
-
-            } catch (InterruptedException e) {
-                if(connection != null)
-                    connection.disconnect();
-
-                return false;
-            }
-        }
-
-        if(connection != null)
-            connection.disconnect();
-
-        _autoScaler.instanceFailure(ip);
-        return true;
-    }
-
-    public static Job getArgs(String qs){
-        Map<String, String> query = WebServer.parseQueryString(qs);
         int xStart, yStart, xFinal, yFinal, velocity;
         try {
             xStart = Integer.parseInt(query.get("x0"));
-            yStart = Integer.parseInt(query.get("y0"));
-            xFinal = Integer.parseInt(query.get("x1"));
-            yFinal = Integer.parseInt(query.get("y1"));
-            velocity = Integer.parseInt(query.get("v"));
-            String mazeFile = query.get("m");
-            if (velocity < 1 || velocity > 100) {
-                return null;
-            }
-
-            return new Job(xStart, yStart, xFinal, yFinal, velocity, mazeFile);
-        }catch (Exception e){
-            return null;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(String.format("Arg %d: xStart argument must be a number", 0));
         }
+        try {
+            yStart = Integer.parseInt(query.get("y0"));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(String.format("Arg %d: yStart argument must be a number", 1));
+        }
+        try {
+            xFinal = Integer.parseInt(query.get("x1"));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(String.format("Arg %d: xFinal argument must be a number", 2));
+        }
+        try {
+            yFinal = Integer.parseInt(query.get("y1"));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(String.format("Arg %d: yFinal argument must be a number", 3));
+        }
+        try {
+            velocity = Integer.parseInt(query.get("v"));
+            if (velocity < 1 || velocity > 100) {
+                throw new IllegalArgumentException(String.format("Arg %d: velocity argument must be between 1 and 100", 4));
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(String.format("Arg %d: velocity argument must be a number", 4));
+        }
+        String strategy = query.get("s");
+
+        return new Job(xStart, yStart, xFinal, yFinal, velocity, strategy);
     }
-    static class RunnerHandler implements HttpHandler {
+    static class MazeRunnerHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-            Job job = getArgs(t.getRequestURI().getQuery());
+            System.out.println("Received request");
+            Job job = createJob(t.getRequestURI().getQuery());
 
+            Instance instanceForJob = null;
             String ipForJob = null;
-            do {
-                try {
-                    ipForJob = _autoScaler.scheduleJob(job);
-
-                    if (ipForJob.equals(_autoScaler.QUEUED)) {
-                        ipForJob = _autoScaler.waitForBootAndSchedule();
-                    }
-                } catch(InterruptedException e) {
-                    // print error and retry
-                    System.out.println("failed to schedule job: " + e.getMessage());
-                }
-
+            try {
+                instanceForJob = instanceManager.distributeJob(job);
+                ipForJob = instanceForJob.getEc2Instance().getPublicIpAddress();
+            } catch(Exception e) {
+                e.printStackTrace();
+                return;
             }
-            while (isAlive(ipForJob)); // run until job is finished
-
 
             String charset = java.nio.charset.StandardCharsets.UTF_8.name();
             String query = t.getRequestURI().getQuery();
+            System.out.println(query);
 
-            HttpURLConnection connection = (HttpURLConnection) new URL("http", ipForJob, 8000, "/mzrun.html"+"?"+query).openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URL("http", ipForJob, 8000, "/mzrun.html?"+query).openConnection();
             connection.setRequestProperty("Accept-Charset", charset);
 
             try {
-                job.setDesiredIP(ipForJob);
-
                 InputStream response = connection.getInputStream();
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -151,23 +97,45 @@ public class LoadBalancer {
                 outputStream.writeTo(os);
                 os.close();
 
-            } catch(IOException e) {
+            } catch(Exception e) {
                 e.printStackTrace();
                 String response = connection.getResponseCode() + "\n";
                 System.out.println(response);
-                t.sendResponseHeaders(200, response.length());
+                t.sendResponseHeaders(400, response.length());
                 OutputStream os = t.getResponseBody();
                 os.write(response.getBytes());
                 os.close();
-
-            } catch (Exception e) {
-                t.sendResponseHeaders(400, e.getMessage().length());
-                OutputStream os = t.getResponseBody();
-                os.write(e.getMessage().getBytes());
-                os.close();
+            } finally {
+                instanceManager.endJob(job, instanceForJob);
             }
-            // Job finished. Update scheduler.
-            _autoScaler.finishJob(job, ipForJob);
         }
+    }
+
+    @SuppressWarnings("Duplicates")
+    public static Map<String, String> parseQueryString(String qs) {
+        Map<String, String> result = new HashMap<>();
+        if (qs == null)
+            return result;
+
+        int last = 0, next, l = qs.length();
+        while (last < l) {
+            next = qs.indexOf('&', last);
+            if (next == -1)
+                next = l;
+
+            if (next > last) {
+                int eqPos = qs.indexOf('=', last);
+                try {
+                    if (eqPos < 0 || eqPos > next)
+                        result.put(URLDecoder.decode(qs.substring(last, next), "utf-8"), "");
+                    else
+                        result.put(URLDecoder.decode(qs.substring(last, eqPos), "utf-8"), URLDecoder.decode(qs.substring(eqPos + 1, next), "utf-8"));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e); // will never happen, utf-8 support is mandatory for java
+                }
+            }
+            last = next + 1;
+        }
+        return result;
     }
 }

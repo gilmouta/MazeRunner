@@ -3,11 +3,10 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
 
-@SuppressWarnings("Duplicates")
 public class MetricCollector {
     //private static PrintStream out = null;
     private static ThreadLocal<Metric> threadMetric = new ThreadLocal<>();
-    private static ThreadLocal<Integer> callDepth = new ThreadLocal<>();
+    //private static ThreadLocal<Integer> callDepth = new ThreadLocal<>();
     private static ThreadLocal<HashMap<Integer,Integer>> loopCount = new ThreadLocal<>();
     
     /* main reads in all the files class files present in the input directory,
@@ -49,8 +48,8 @@ public class MetricCollector {
                     Instruction[] instructions = routine.getInstructions();
 
                     // Count method call depth
-                    routine.addBefore("MetricCollector", "mstart", new Integer(1));
-                    routine.addAfter("MetricCollector", "mend", new Integer(1));
+                    //routine.addBefore("MetricCollector", "mstart", new Integer(1));
+                    //routine.addAfter("MetricCollector", "mend", new Integer(1));
 
                     for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                         BasicBlock bb = (BasicBlock) b.nextElement();
@@ -78,11 +77,11 @@ public class MetricCollector {
 
     public static synchronized void deleteMetric() {
         threadMetric.remove();
-        callDepth.remove();
+        //callDepth.remove();
         loopCount.remove();
     }
 
-    public static synchronized void mstart(int m) {
+    /*public static synchronized void mstart(int m) {
         if (callDepth.get() == null) {
             callDepth.set(0);
         }
@@ -93,7 +92,7 @@ public class MetricCollector {
 
     public static synchronized void mend(int m) {
         callDepth.set(callDepth.get()-1);
-    }
+    }*/
 
     public static synchronized void loopcount(int offset) {
         if (loopCount.get() == null) {

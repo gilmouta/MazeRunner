@@ -6,9 +6,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class MetricSystem {
     private static MetricSystem ourInstance = new MetricSystem();
@@ -44,7 +42,7 @@ public class MetricSystem {
 
             // Add an item
             Map<String, AttributeValue> item = newItem(metric.getDistance(), metric.getVelocity(),
-                    metric.getStrategy(), metric.getCallDepth(), metric.getLoopDepth());
+                    metric.getStrategy(), metric.getLoopDepth());
             PutItemRequest putItemRequest = new PutItemRequest(tableName, item);
             dynamoDB.putItem(putItemRequest);
 
@@ -58,12 +56,37 @@ public class MetricSystem {
         }
     }
 
+    public long estimateCost(int distance, String strategy){
+        Map<String,String> expressionAttributesNames = new HashMap<>();
+        expressionAttributesNames.put("#strategy","strategy");
+        expressionAttributesNames.put("#distance","distance");
+
+        Map<String,AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":strategy",new AttributeValue().withS("astar"));
+        expressionAttributeValues.put(":from",new AttributeValue().withN(Long.toString(distance-50)));
+        expressionAttributeValues.put(":to",new AttributeValue().withN(Long.toString(distance+50)));
+
+        ScanRequest scanRequest = new ScanRequest()
+                .withTableName(tableName)
+                .withFilterExpression("#strategy = :strategy and #distance BETWEEN :from AND :to ")
+                .withExpressionAttributeNames(expressionAttributesNames)
+                .withExpressionAttributeValues(expressionAttributeValues);
+
+        ScanResult result = dynamoDB.scan(scanRequest);
+
+        if (result.getCount() == 0) {
+            return -1;
+        }
+
+        long estimatedLoopDepth = 0;
+        for (Map<String, AttributeValue> item : result.getItems()) {
+            estimatedLoopDepth += Long.parseLong(item.get("loopDepth").getN());
+        }
+        estimatedLoopDepth = Math.round(estimatedLoopDepth/result.getCount());
+        return estimatedLoopDepth;
+    }
+
     private void init() {
-        /*
-         * The ProfileCredentialsProvider will return your [default]
-         * credential profile by reading from the credentials file located at
-         * (~/.aws/credentials).
-         */
         ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
         try {
             credentialsProvider.getCredentials();
@@ -82,10 +105,12 @@ public class MetricSystem {
         try{
             tableName = "metrics-CNV";
 
-            // Create a table with a primary hash key named 'id', which holds a random String
+            // Create a table with a primary hash key named 'id', which holds a random String and a range key for the distance
             CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
-                    .withKeySchema(new KeySchemaElement().withAttributeName("id").withKeyType(KeyType.HASH))
-                    .withAttributeDefinitions(new AttributeDefinition().withAttributeName("id").withAttributeType(ScalarAttributeType.S))
+                    .withKeySchema(new KeySchemaElement().withAttributeName("id").withKeyType(KeyType.HASH),
+                                   new KeySchemaElement().withAttributeName("distance").withKeyType(KeyType.RANGE))
+                    .withAttributeDefinitions(new AttributeDefinition().withAttributeName("id").withAttributeType(ScalarAttributeType.S),
+                                              new AttributeDefinition().withAttributeName("distance").withAttributeType(ScalarAttributeType.N))
                     .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
 
             // Create table if it does not exist yet
@@ -104,14 +129,14 @@ public class MetricSystem {
         }
     }
 
-    private Map<String, AttributeValue> newItem(int distance, int velocity, String strategy, int callDepth, int loopDepth) {
+    private Map<String, AttributeValue> newItem(int distance, int velocity, String strategy, int loopDepth) {
         Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
         String id = UUID.randomUUID().toString();
         item.put("id", new AttributeValue(id));
         item.put("strategy", new AttributeValue(strategy));
         item.put("distance", new AttributeValue().withN(Integer.toString(distance)));
         item.put("velocity", new AttributeValue().withN(Integer.toString(velocity)));
-        item.put("callDepth", new AttributeValue().withN(Integer.toString(callDepth)));
+        //item.put("callDepth", new AttributeValue().withN(Integer.toString(callDepth)));
         item.put("loopDepth", new AttributeValue().withN(Integer.toString(loopDepth)));
 
         return item;
@@ -125,5 +150,33 @@ public class MetricSystem {
         System.out.println("AWS Error Code:   " + ase.getErrorCode());
         System.out.println("Error Type:       " + ase.getErrorType());
         System.out.println("Request ID:       " + ase.getRequestId());
+    }
+
+    public static void main(String[] args){
+        MetricSystem m = MetricSystem.getInstance();
+
+        Map<String,String> expressionAttributesNames = new HashMap<>();
+        expressionAttributesNames.put("#strategy","strategy");
+        expressionAttributesNames.put("#distance","distance");
+
+        Map<String,AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":strategy",new AttributeValue().withS("astar"));
+        expressionAttributeValues.put(":from",new AttributeValue().withN(Long.toString(900)));
+        expressionAttributeValues.put(":to",new AttributeValue().withN(Long.toString(1000)));
+
+        ScanRequest scanRequest = new ScanRequest()
+                .withTableName(m.tableName)
+                .withFilterExpression("#strategy = :strategy and #distance BETWEEN :from AND :to ")
+                .withExpressionAttributeNames(expressionAttributesNames)
+                .withExpressionAttributeValues(expressionAttributeValues);
+
+        ScanResult result = m.dynamoDB.scan(scanRequest);
+
+        long estimatedLoopDepth = 0;
+        for (Map<String, AttributeValue> item : result.getItems()) {
+            estimatedLoopDepth += Long.parseLong(item.get("loopDepth").getN());
+        }
+        estimatedLoopDepth = Math.round(estimatedLoopDepth/result.getCount());
+        System.out.println(estimatedLoopDepth);
     }
 }

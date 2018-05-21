@@ -8,25 +8,25 @@ public class Metric {
     private String strategy;
 
     // Collected metrics
-    private int callDepth;
+    //private int callDepth;
     private Map<Integer, Integer> loopCount;  // Don't store in DB
     private int loopDepth;
 
     public Metric(String xStart, String xFinal, String yStart, String yFinal, String velocity, String strategy){
-        int x1 = Integer.parseInt(xStart);
-        int x2 = Integer.parseInt(xFinal);
-        int y1 = Integer.parseInt(yStart);
-        int y2 = Integer.parseInt(yFinal);
-        distance = (int) Math.round(Math.sqrt((x2-x1)^2 + (y2-y1)^2));
+        int x0 = Integer.parseInt(xStart);
+        int x1 = Integer.parseInt(xFinal);
+        int y0 = Integer.parseInt(yStart);
+        int y1 = Integer.parseInt(yFinal);
+        distance = (int) Math.round(Math.sqrt(Math.pow(x1-x0, 2) + Math.pow(y1-y0, 2)));
         this.velocity = Integer.parseInt(velocity);
         this.strategy = strategy;
         //this.maze = maze;
-        this.callDepth = 0;
+        //this.callDepth = 0;
         this.loopCount = new HashMap<>();
         this.loopDepth = 0;
     }
     public String toString() {
-        return "[Metric] loopdepth: " + loopDepth + " | calldepth: " + callDepth;
+        return "[Metric] for distance: "+ distance +" we got loopdepth: " + loopDepth;
     }
 
     public int getDistance(){
@@ -61,7 +61,7 @@ public class Metric {
         this.loopCount = loopCount;
     }
 
-    public int getCallDepth() {
+    /*public int getCallDepth() {
         return callDepth;
     }
     public void setCallDepth(int callDepth) {
@@ -72,7 +72,7 @@ public class Metric {
         if (callDepth > this.callDepth) {
             this.callDepth = callDepth;
         }
-    }
+    }*/
 
     public void calculateLoopDepth() {
         for (Integer depth: loopCount.values()){

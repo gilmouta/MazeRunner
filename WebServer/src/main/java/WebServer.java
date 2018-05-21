@@ -23,7 +23,6 @@ public class WebServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
         server.createContext("/test", new TestHandler());
         server.createContext("/mzrun.html", new MazeRunnerHandler());
-        //server.setExecutor(null); // creates a default executor
         server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
         System.out.println("Starting server.");
         server.start();
@@ -42,15 +41,12 @@ public class WebServer {
         }
     }
 
-    @SuppressWarnings("Duplicates") // FIXME
     static class MazeRunnerHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
             try {
                 System.out.println("Doing maze request in thread " + java.lang.Thread.currentThread().getId());
                 Map<String, String> query = parseQueryString(t.getRequestURI().getQuery());
-
-                metricSystem.startRequest(new Metric(query.get("x0"), query.get("x1"), query.get("y0"), query.get("y1"), query.get("v"), query.get("s")));
 
                 if (query.size() < 7) {
                     throw new IllegalArgumentException("InsuficientArguments - The maze runners do not have enough information to solve the maze");
@@ -85,6 +81,7 @@ public class WebServer {
                 } catch (NumberFormatException e) {
                     throw new IllegalArgumentException(String.format("Arg %d: velocity argument must be a number", 4));
                 }
+
                 MazeRunningStrategy strategy = null;
                 strategy = FactoryMazeRunningStrategies.CreateMazeRunningStrategy(query.get("s"));
 
@@ -108,9 +105,9 @@ public class WebServer {
                     return;
                 }
 
+                metricSystem.startRequest(new Metric(query.get("x0"), query.get("x1"), query.get("y0"), query.get("y1"), query.get("v"), query.get("s")));
                 // Solve the maze.
                 strategy.solve(maze, xStart, yStart, xFinal, yFinal, velocity);
-
 
                 // Choose the way to render the maze and rendered it
                 RenderMaze renderMaze = new RenderMazeHTMLClientCanvas();
@@ -132,6 +129,7 @@ public class WebServer {
     }
 
 
+    @SuppressWarnings("Duplicates")
     public static Map<String, String> parseQueryString(String qs) {
         Map<String, String> result = new HashMap<>();
         if (qs == null)
