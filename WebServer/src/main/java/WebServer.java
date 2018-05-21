@@ -106,12 +106,16 @@ public class WebServer {
                 }
 
                 metricSystem.startRequest(new Metric(query.get("x0"), query.get("x1"), query.get("y0"), query.get("y1"), query.get("v"), query.get("s")));
+
+                long startTime = System.nanoTime();
                 // Solve the maze.
                 strategy.solve(maze, xStart, yStart, xFinal, yFinal, velocity);
 
                 // Choose the way to render the maze and rendered it
                 RenderMaze renderMaze = new RenderMazeHTMLClientCanvas();
                 String mazeRendered = renderMaze.render(maze, velocity);
+                long estimatedTime = System.nanoTime() - startTime;
+                System.out.println("["+Thread.currentThread().getId()+"] Elapsed time: " + estimatedTime);
 
                 t.sendResponseHeaders(200, mazeRendered.length());
                 OutputStream os = t.getResponseBody();

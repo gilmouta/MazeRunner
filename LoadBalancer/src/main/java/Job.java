@@ -12,7 +12,7 @@ public class Job {
         this.yFinal = yFinal;
         this.velocity = velocity;
         this.strategy = strategy;
-        distance = (int) Math.round(Math.sqrt((xFinal-xStart)^2 + (yFinal-yStart)^2));
+        distance = (int) Math.round(Math.sqrt(Math.pow(xFinal-xStart,2) + Math.pow(yFinal-yStart,2)));
         estimateCost();
     }
 
@@ -30,7 +30,11 @@ public class Job {
             // MetricSystem didn't have close enough metrics, so we need to estimate one
             // Linear function: c = 557.43d - 112791
             // Based on BFS results, overestimation at worse
+            // Since the estimation is bad at lower values, we need to add a bound
             estimatedCost = 557.43*distance - 112791;
+            if (estimatedCost < 10000) {
+                estimatedCost = 10000;
+            }
         }
 
         // Velocity doesn't affect our metric. It does affect time taken (cost) in basically a 1:1 ratio

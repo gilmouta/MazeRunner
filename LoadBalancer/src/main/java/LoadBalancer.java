@@ -86,7 +86,6 @@ public class LoadBalancer {
                 InputStream response = connection.getInputStream();
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-                System.out.print("received " + job.toString());
                 int data;
                 while ((data = response.read()) > -1) {
                     outputStream.write(data);

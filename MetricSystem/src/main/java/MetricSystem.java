@@ -62,9 +62,9 @@ public class MetricSystem {
         expressionAttributesNames.put("#distance","distance");
 
         Map<String,AttributeValue> expressionAttributeValues = new HashMap<>();
-        expressionAttributeValues.put(":strategy",new AttributeValue().withS("astar"));
-        expressionAttributeValues.put(":from",new AttributeValue().withN(Long.toString(distance-50)));
-        expressionAttributeValues.put(":to",new AttributeValue().withN(Long.toString(distance+50)));
+        expressionAttributeValues.put(":strategy",new AttributeValue().withS(strategy));
+        expressionAttributeValues.put(":from",new AttributeValue().withN(Long.toString(distance-25)));
+        expressionAttributeValues.put(":to",new AttributeValue().withN(Long.toString(distance+25)));
 
         ScanRequest scanRequest = new ScanRequest()
                 .withTableName(tableName)
@@ -78,11 +78,15 @@ public class MetricSystem {
             return -1;
         }
 
+        double weightSum = 0;
         long estimatedLoopDepth = 0;
         for (Map<String, AttributeValue> item : result.getItems()) {
-            estimatedLoopDepth += Long.parseLong(item.get("loopDepth").getN());
+            double metricDistance = Long.parseLong(item.get("distance").getN());
+            double weight = 1-Math.abs((metricDistance/distance)-1);
+            estimatedLoopDepth += Long.parseLong(item.get("loopDepth").getN()) * weight;
+            weightSum += weight;
         }
-        estimatedLoopDepth = Math.round(estimatedLoopDepth/result.getCount());
+        estimatedLoopDepth = Math.round(estimatedLoopDepth/weightSum);
         return estimatedLoopDepth;
     }
 
