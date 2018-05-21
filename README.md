@@ -1,6 +1,6 @@
 # MazeRunner
 To first install the project, please run the install.sh script.
-The project currently has 3 module:
+The project currently has 4 module:
 
 ## WebServer
 The Web Server is responsible for receiving requests and creating threads running the MazeRunner application. It can be run using the executeweb.sh script after the initial instalation.
@@ -17,3 +17,8 @@ The instrumented classes are the classes responsible for the three MazeRunner St
 ## Metric System
 
 The Metric System is responsible for sending metrics to the DynamoDB, as well as estimating execution costs.
+
+## Load Balancer
+
+The Load Balancer system is responsible for distributing the several requests across the running instances, based on estimations by the Metric System. 
+It also contains the AutoScaler, which is responsible for running new instances when needed, and removing them when they aren't. 
